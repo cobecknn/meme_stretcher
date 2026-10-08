@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="author" content="Phoenix Dong (Houde Dong)" />
+  <title>meme stretcher</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>meme stretcher</h1>
+    <span class="tagline">make your photo "stretchy"</span>
+    <span class="spacer"></span>
+    <a class="author" href="https://github.com/cobecknn" target="_blank" rel="noopener">by Phoenix Dong (Houde Dong)</a>
+  </header>
+
+  <main>
+    <section id="controls">
+      <div class="panel">
+        <h2>Image</h2>
+        <label class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" accept="image/*" hidden />
+          <span>Drop an image here, click to import, or paste (Ctrl+V)</span>
+        </label>
+        <div class="row">
+          <label>Image size</label>
+          <input type="range" id="fitInput" min="0.15" max="1" step="0.01" value="0.5" />
+        </div>
+        <div class="row">
+          <label>Background</label>
+          <label class="check"><input type="checkbox" id="transparentInput" /> empty (transparent)</label>
+          <input type="color" id="bgInput" value="#16161d" title="Background color" />
+        </div>
+        <div class="row">
+          <label>Cut out</label>
+          <button id="cutBtn">✂ Lasso</button>
+          <select id="cutMode">
+            <option value="keep">keep inside</option>
+            <option value="remove">remove inside</option>
+          </select>
+        </div>
+        <div class="row quick">
+          <button id="undoCutBtn" disabled>↶ Undo cut</button>
+          <button id="resetImgBtn" disabled>Reset image</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Axes</h2>
+          <button id="addAxis" class="primary">+ Add axis</button>
+        </div>
+        <p class="hint">
+          In each graph, time runs left to right over one cycle. Height is tensity: the top line
+          stretches the image to the full multiplier, the middle line leaves it unchanged, and the
+          bottom line compresses it by the multiplier. Click to add a point, drag to move it, and
+          double-click or right-click to delete it.
+        </p>
+        <div id="axisList"></div>
+      </div>
+    </section>
+
+    <section id="stage">
+      <div class="stage-toolbar">
+        <button id="playBtn">Pause</button>
+        <button id="restartBtn">Restart</button>
+        <label class="check"><input type="checkbox" id="guidesInput" checked /> Show axes</label>
+      </div>
+      <div id="canvasWrap">
+        <canvas id="display"></canvas>
+      </div>
+      <div class="export-bar">
+        <label>Format <select id="formatSelect"></select></label>
+        <label>Size
+          <select id="sizeSelect">
+            <option value="240">240</option>
+            <option value="320">320</option>
+            <option value="480" selected>480</option>
+            <option value="640">640</option>
+            <option value="800">800</option>
+            <option value="1080">1080</option>
+          </select> px
+        </label>
+        <label>FPS
+          <select id="fpsSelect">
+            <option value="10">10</option>
+            <option value="15">15</option>
+            <option value="20">20</option>
+            <option value="25" selected>25</option>
+            <option value="33">33</option>
+            <option value="50">50</option>
+          </select>
+        </label>
+        <label>Length <input type="number" id="lenInput" min="0.1" max="60" step="0.1" value="1" disabled /> s</label>
+        <label class="check" title="Length of one seamless loop of all axes"><input type="checkbox" id="autoLenInput" checked /> one full loop only</label>
+        <span class="spacer"></span>
+        <button id="exportBtn" class="primary">Export</button>
+      </div>
+      <div id="status"></div>
+    </section>
+  </main>
+
+  <template id="axisTemplate">
+    <div class="axis">
+      <div class="axis-head">
+        <span class="swatch"></span>
+        <strong class="axis-name"></strong>
+        <label class="check"><input type="checkbox" data-k="enabled" checked /> on</label>
+        <span class="spacer"></span>
+        <button class="del" title="Delete axis">✕</button>
+      </div>
+
+      <div class="row">
+        <label>Direction</label>
+        <input type="range" data-k="angle" min="0" max="179" step="1" />
+        <input type="number" data-k="angle" min="0" max="179" step="1" class="num" />°
+      </div>
+      <div class="row quick">
+        <button data-angle="0">↔ horizontal</button>
+        <button data-angle="90">↕ vertical</button>
+        <button data-angle="45">⤢ 45°</button>
+        <button data-angle="135">⤡ 135°</button>
+      </div>
+      <div class="row">
+        <label>Max multiplier</label>
+        <input type="range" data-k="mult" min="1" max="6" step="0.05" />
+        <input type="number" data-k="mult" min="1" max="20" step="0.05" class="num" />×
+      </div>
+      <div class="row">
+        <label>Cycle duration</label>
+        <input type="range" data-k="duration" min="0.1" max="10" step="0.1" />
+        <input type="number" data-k="duration" min="0.05" max="60" step="0.05" class="num" />s
+      </div>
+      <div class="row">
+        <label>Curve</label>
+        <select data-k="preset">
+          <option value="">preset…</option>
+          <option value="sine">wave</option>
+          <option value="pulse">pulse</option>
+          <option value="bounce">bounce</option>
+          <option value="saw">ramp</option>
+          <option value="square">snap</option>
+          <option value="stretchOnly">stretch only</option>
+          <option value="squashOnly">compress only</option>
+          <option value="flat">flat</option>
+        </select>
+        <select data-k="interp">
+          <option value="smooth">smooth</option>
+          <option value="linear">linear</option>
+          <option value="step">step</option>
+        </select>
+        <label class="check" title="Shrink the perpendicular direction when stretching, so the image keeps its area">
+          <input type="checkbox" data-k="preserve" /> keep area
+        </label>
+      </div>
+
+      <div class="curve-wrap">
+        <canvas class="curve"></canvas>
+        <div class="readout"></div>
+      </div>
+    </div>
+  </template>
+
+  <script src="gif.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
